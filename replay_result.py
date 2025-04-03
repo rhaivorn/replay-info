@@ -854,9 +854,9 @@ def get_replay_info(file_path, mode, rename_info=False):
                                         quit_data[key] = [last_crc_index]
                                         teams_data[value['team']][teams[value['team']].index(key)] = last_crc_index
                         if num_player in teams[winning_team]:
-                            match_result = f'Win ({match_result})'
+                            match_result = f'Win'
                         else:
-                            match_result = f'Loss ({match_result})'
+                            match_result = f'Loss'
                         if num_player in observer_num_list:
                             match_result = f'Team {winning_team} won'
                         winning_team_string = winning_team
