@@ -374,9 +374,6 @@ def sanitize_filename(filename, replacement="_"):
 
 
 def get_replay_info(file_path, mode, rename_info=False):
-    # file_path = '21-21-08_1v1v1v1v1v1v1_tar_LaZy_Pab_SXX_VoG_rag_End (1).rep'
-    # file_path = '15-40-37_1v1_Biletsky_player.rep'
-    # mode = 1
     header, hex_data = get_replay_data(file_path, mode)
 
     start_time = header['begin_timestamp']
