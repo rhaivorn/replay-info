@@ -10,7 +10,7 @@ Ensure you have Python installed. You can download it from [python.org](https://
 
 ### Clone the Repository
 ```sh
-git clone https://github.com/yourusername/replay-info.git
+git clone https://github.com/rhaivorn/replay-info.git
 cd replay-info
 ```
 
