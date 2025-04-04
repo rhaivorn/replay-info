@@ -536,6 +536,7 @@ class MyFrame(wx.Frame):
             wx.MessageBox("All files renamed successfully!", "Success", wx.OK | wx.ICON_INFORMATION)
         except Exception as e:
             wx.MessageBox(f"Error renaming files: {e}", "Error", wx.OK | wx.ICON_ERROR)
+        self.update_file_list(self.dir_path.GetValue())
 
     
     def rename_file(self, filepath, current_filename):
