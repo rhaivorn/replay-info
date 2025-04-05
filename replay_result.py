@@ -861,7 +861,7 @@ def get_replay_info(file_path, mode, rename_info=False):
             else:
                 match_result = 'Ended with Quit Game in Disconnect Menu'
                 if num_player in player_num_list:
-                    if ((players_quit_frames[num_player]['exit']) != 0) and (-1 not in teams[players[num_player]['team']]):
+                    if ((players_quit_frames[num_player]['exit']) != 0) and (-1 not in teams_data[players[num_player]['team']]):
                         match_result = 'Loss'
                     elif players_quit_frames[num_player]['exit'] != 0:
                         match_result = 'Unk (Not enough data)'
