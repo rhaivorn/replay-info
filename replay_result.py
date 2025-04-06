@@ -271,7 +271,7 @@ def extract_crc(hex_data, index):
 
 
 def update_players_data(num_player, hex_data, quit_data, teams, teams_data, winning_team, players_quit_frames, 
-                        observer_num_list, last_crc_data, last_crc_index, actual_end_frame, found_winner):
+                        observer_num_list, last_crc_data, last_crc_index, found_winner):
     # Cache frame time where victory occurs if it exists
     if found_winner and len(teams)>1:
         max_losers_index = max([max(times) for team, times in teams_data.items() if team != winning_team])
@@ -283,11 +283,15 @@ def update_players_data(num_player, hex_data, quit_data, teams, teams_data, winn
         if player_num in last_crc_data:
             # Check if we should add CRC
             crc_condition = ((player_num not in quit_data and num_player not in quit_data) or 
-                            (player_num in quit_data and len(quit_data[player_num])==1 and last_crc_index > quit_data[player_num][0]) or
+                            (player_num in quit_data and len(quit_data[player_num])==1 and last_crc_index > quit_data[player_num][0]
+                                and (num_player not in quit_data or last_crc_index > quit_data[num_player][0]) ) or
                             (player_num not in quit_data and num_player in quit_data and last_crc_index > quit_data[num_player][0]))
                             
             if crc_condition:
                 player_data['last_crc'] = extract_crc(hex_data, last_crc_data[player_num])
+    
+    for player_num in players_quit_frames:  
+        player_data = players_quit_frames[player_num]  
         
         # Skip players without quit data
         if player_num not in quit_data:
@@ -316,20 +320,37 @@ def update_players_data(num_player, hex_data, quit_data, teams, teams_data, winn
             
         # Special handling for comparing to num_player
         if player_num != num_player and num_player in quit_data:
-            
-            # Exit since player was not found in the next crc check?
-            if actual_end_frame and (actual_end_frame - frame_time) >= 101:
-                player_data['exit'] = frame_time
-                continue
-                
+
             # Winning players at the end can only exit
-            if (found_winner):
+            if (found_winner) and (player_num in teams[winning_team]):
                 if quit_indices[0] > max_losers_index:
                     player_data['exit'] = frame_time
                     continue
 
+            # Exit since player was not found in the next crc check?
+            if players_quit_frames[num_player]['last_crc'] == '':
+                # this replay's player did not stay till the end.
+                crc_index_before_quit = hex_data.rfind(f"470400000{num_player:x}0000000200010201", 0, quit_data[num_player][0])
+                crc_frame_before_quit = hex_data[crc_index_before_quit-8:crc_index_before_quit]
+
+                if frame_time < hex_to_decimal(crc_frame_before_quit):
+                    if hex_data.rfind(f"{crc_frame_before_quit}470400000{player_num:x}0000000200010201") != -1:
+                        # if player_num quit before this replay's player(num_player) and then was part of a crc check before num_player quit.
+                        player_data['surrender'] = frame_time
+                    else:
+                        # else player exited
+                        player_data['exit'] = frame_time
+                else:
+                    # if no crc check after player_num quit and before this replay's player quit, its surrender or exit (we don't know which)
+                    player_data['surrender/exit?'] = frame_time
+            elif players_quit_frames[num_player]['last_crc'] != '':
+                if player_data['last_crc'] == '':
+                    player_data['exit'] = frame_time
+                else:
+                    player_data['surrender'] = frame_time
+
             # Uncertain quit type
-            player_data['surrender/exit?'] = frame_time
+            # player_data['surrender/exit?'] = frame_time
             continue
             
         player_data['exit'] = frame_time
@@ -650,7 +671,7 @@ def get_replay_info(file_path, mode, rename_info=False):
 
     found_winner, winning_team = find_winning_team(teams_data)
 
-    update_players_data(num_player, hex_data, quit_data, teams, teams_data, winning_team, players_quit_frames, observer_num_list, last_crc_data, last_crc_index, actual_end_frame, found_winner)
+    update_players_data(num_player, hex_data, quit_data, teams, teams_data, winning_team, players_quit_frames, observer_num_list, last_crc_data, last_crc_index, found_winner)
 
     player_final_message_frame = actual_replay_end
     if num_player in quit_data:
