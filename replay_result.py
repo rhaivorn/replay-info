@@ -444,20 +444,12 @@ def get_replay_info(file_path, mode, rename_info=False):
     last_messages = re.findall(r"00....00000.000000", hex_data[-1000:])
 
     if len(last_messages) >= 2:
-        if is_normal_rep:
-            index = hex_data.rfind(last_messages[-2])
-            actual_end_frame = hex_to_decimal(hex_data[index-6:index+2]) #get the frame
+        index = hex_data.rfind(last_messages[-2])
+        actual_end_frame = hex_to_decimal(hex_data[index-6:index+2]) #get the frame
 
-            # Check condition and update actual_replay_end
-            if abs(actual_end_frame - rep_duration) > 101:
-                actual_replay_end = actual_end_frame
-        else:
-            index = hex_data.rfind(last_messages[-1])
-            actual_end_frame = hex_to_decimal(hex_data[index-6:index+2])
+        # Check condition and update actual_replay_end
+        if abs(actual_end_frame - rep_duration) > 101:
             actual_replay_end = actual_end_frame
-            rep_duration = actual_replay_end
-
-
 
     players = {}
     teams = {}
@@ -644,8 +636,6 @@ def get_replay_info(file_path, mode, rename_info=False):
         players_quit_frames[key]['last_crc'] = ''
         players_quit_frames[key]['surrender/exit?'] = 0
         players_quit_frames[key]['idle/kicked?'] = 0
-        players_quit_frames[key]['placement'] = 0
-
 
     found_winner, winning_team = find_winning_team(teams_data)
 
@@ -667,10 +657,6 @@ def get_replay_info(file_path, mode, rename_info=False):
     #typical messages (orders) that observer players can also send (needs updating). 
     #pattern: 00xxxxxxxx0 (messages are 4 bytes only but we include msb of frame and first 4bits of player num, as they are always 0, to imporve search)
     patterns = ["001b0000000", "00470400000", "00490400000", "00eb0300000", "00e90300000", "00220400000", "00450400000", "00f80300000", "00f90300000", "00fa0300000", "00fb0300000", "00fc0300000", "00fd0300000", "00fe0300000", "00ff0300000", "00000400000", "00010400000", ]
-
-    original_quit_data = copy.deepcopy(quit_data)
-    original_teams_data = copy.deepcopy(teams_data)
-    original_players_quit_frames = copy.deepcopy(players_quit_frames)
 
     #look for idle players that most likely got kicked (needs more testing). Note: Frame(timestamp) will not necessarily correspond to the moment of kick, but around that time depending on the scenario (Eg. player has useless last buildings and is just hiding and waiting to be kicked, actual kick cold be way later, but will be considered idle the moment the player cant really impact others in the game (this might impact placement results)). 
     update_players_data_again = False
@@ -712,8 +698,12 @@ def get_replay_info(file_path, mode, rename_info=False):
     if update_players_data_again:
         teams_data = {team: [quit_data.get(player, [-1])[0] for player in players] for team, players in teams.items()}
         found_winner, winning_team = find_winning_team(teams_data)
-        update_players_data(num_player, hex_data, quit_data, teams, teams_data, winning_team, players_quit_frames, observer_num_list, last_crc_data, last_crc_index, actual_end_frame, found_winner)
-
+        for key, value in players.items():
+            if players_quit_frames[key]['idle/kicked?']!=0:
+                if players_quit_frames[key]['surrender/exit?']!=0:
+                    players_quit_frames[key]['exit'] = players_quit_frames[key]['surrender/exit?']
+                    players_quit_frames[key]['surrender/exit?'] = 0
+        
     match_result = ''
     winning_team_string = ''
 
@@ -870,7 +860,7 @@ def get_replay_info(file_path, mode, rename_info=False):
                 elif num_player in observer_num_list:
                     match_result = 'Unk (Failed (Obs quit early or before end patterns))'
         else:
-            match_result = 'Unk (Not data)'
+            match_result = 'DC at start of game'
 
 
     
@@ -910,6 +900,6 @@ def get_replay_info(file_path, mode, rename_info=False):
 
     player_infos = []
     for key, value in players.items():
-        player_infos.append((value['team'], value['ip'], value['name'], f"{factions.get(value['faction'], 'Unknown')} {'(Random)' if value['random']==1 else ''}", ddhhmmss(original_players_quit_frames[key]['surrender/exit?']/30), ddhhmmss(original_players_quit_frames[key]['surrender']/30), ddhhmmss(original_players_quit_frames[key]['exit']/30), ddhhmmss(players_quit_frames[key]['idle/kicked?']/30), original_players_quit_frames[key]['last_crc'], placement.get(value['team'], ''), colors.get(value['color'], 'Unknown')))
+        player_infos.append((value['team'], value['ip'], value['name'], f"{factions.get(value['faction'], 'Unknown')} {'(Random)' if value['random']==1 else ''}", ddhhmmss(players_quit_frames[key]['surrender/exit?']/30), ddhhmmss(players_quit_frames[key]['surrender']/30), ddhhmmss(players_quit_frames[key]['exit']/30), ddhhmmss(players_quit_frames[key]['idle/kicked?']/30), players_quit_frames[key]['last_crc'], placement.get(value['team'], ''), colors.get(value['color'], 'Unknown')))
 
     return replay_info, player_infos
