@@ -164,34 +164,45 @@ def fix_empty_slot_issue(slots_data):
 
 
 def get_pl_num_offset(player_slot, slots_data, hex_data):
-    """Player num usually starts at 2, however for some maps this is not the case (eg. casino maps), 
-    so we also use the local slot num to calculate the offset. To do this we first fix the slot number.
-    Player num can be obtained from the last message, however if the relay did not end properly we try to get the
-    offset using the first crc message checks, if that fails we also try the deselect messages."""
+    """Player num usually starts at 2, however for some maps this is not the case (eg. casino maps), we assume
+    that the slot number will tell us this replay's player. If the replay ended properly then we could use the
+    final message and slot number to get the offset. However, if the slot number is wrong or is manipulated/corrupt?, 
+    we would get wrong offset values, so well shall first look for the player number using the first logic crc
+    check, and then use other methods if that fails"""
     fixed_slots = fix_empty_slot_issue(slots_data)
     
-    if hex_data[-18:-10] == '1b000000':
-        num_player = int(hex_data[-9:-8], 16)
-        offset = num_player - fixed_slots[player_slot]
-        return num_player, offset, True
-        
+    offset = 2
+    pl_num_from_first_crc = []
     index_of_first_crc = hex_data.find("00470400000")
     if index_of_first_crc != -1:
         timecode_first_crc = hex_to_decimal(hex_data[index_of_first_crc-6:index_of_first_crc+2])
         timecode_hex = bytearray(timecode_first_crc.to_bytes(4, byteorder='little')).hex()
-        first_check = re.findall(f"{timecode_hex}470400000.", hex_data)
+        first_check = set(re.findall(f"{timecode_hex}470400000.", hex_data))
         
         if first_check and len(first_check)>1:
-            offset = int(sorted(first_check)[0][-1], 16)
-        else:
-            first_deselect = list(set(re.findall("00230ff0000.", hex_data)))
-            if first_deselect and len(first_deselect)>1:
-                offset = int(sorted(first_deselect)[0][-1], 16)
+            for ck in sorted(first_check):
+                pl_num_from_first_crc.append(int(ck[-1], 16))
+        if len(pl_num_from_first_crc) == len(fixed_slots):
+            offset = pl_num_from_first_crc[0]
+            num_player = offset + fixed_slots[player_slot]
+            
+            if hex_data[-18:-10] == '1b000000':
+                if num_player != int(hex_data[-9:-8], 16):
+                    # print('Wrong slot in rep.')
+                    #since there are cases where slot is wrong, take the num_player from the clear replay message at the end.
+                    num_player = int(hex_data[-9:-8], 16)
+                return num_player, offset, True
             else:
-                offset = 2 
-    else:
-        offset = 2
+                return num_player, offset, False
     
+    if pl_num_from_first_crc:
+        offset = pl_num_from_first_crc[0]
+        if hex_data[-18:-10] == '1b000000':
+            num_player = int(hex_data[-9:-8], 16)
+            offset = num_player - fixed_slots[player_slot]
+            return num_player, offset, True
+
+    # if no logic crc was found, the replay ended in dc at start, so it dosen't matter.  
     num_player = offset + fixed_slots[player_slot]
     return num_player, offset, False
 
