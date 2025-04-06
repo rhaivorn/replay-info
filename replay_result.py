@@ -692,6 +692,7 @@ def get_replay_info(file_path, mode, rename_info=False):
 
     #look for idle players that most likely got kicked (needs more testing). Note: Frame(timestamp) will not necessarily correspond to the moment of kick, but around that time depending on the scenario (Eg. player has useless last buildings and is just hiding and waiting to be kicked, actual kick cold be way later, but will be considered idle the moment the player cant really impact others in the game (this might impact placement results)). 
     update_players_data_again = False
+    idle_kick_index = []
     if player_final_message_frame >= 5400: #if replay is greater than 3 minutes
         for key, value in players_quit_frames.items():
             if (key not in observer_num_list):
@@ -715,14 +716,17 @@ def get_replay_info(file_path, mode, rename_info=False):
                                         if (value['exit'] != 0) and ((value['exit'] - msg_frame) >= 1200):
                                             value['idle/kicked?'] = msg_frame
                                             quit_data[key].insert(0, msg_index+2)
+                                            idle_kick_index.append(msg_index+2)
                                             update_players_data_again = True
                                         elif (value['surrender/exit?'] != 0) and ((value['surrender/exit?'] - msg_frame) >= 1800):
                                             value['idle/kicked?'] = msg_frame
                                             quit_data[key].insert(0, msg_index+2)
+                                            idle_kick_index.append(msg_index+2)
                                             update_players_data_again = True
                                         elif (key not in quit_data) and (player_final_message_frame-msg_frame >= diff):
                                             value['idle/kicked?'] = msg_frame
                                             quit_data[key] = [msg_index+2]
+                                            idle_kick_index.append(msg_index+2)
                                             update_players_data_again = True
                                     break
 
@@ -763,10 +767,11 @@ def get_replay_info(file_path, mode, rename_info=False):
         # if argument of self_destruct msg command is false, means a vote/countdown kick occured.
         # (eg in 1v1 both players replay would declare them as winners if this was not taken into account, 
         # because both would store the other as vote/countdown kicked.)
-        if int(hex_data[game_end_quit_index+22:game_end_quit_index+24], 16) == 0: 
-            match_result = 'Ended in Disconnect Menue with a player vote/countdown kick'
-            winning_team_string = 'Unknown (DC)'
-            found_winner = False
+        if game_end_quit_index not in idle_kick_index:
+            if int(hex_data[game_end_quit_index+22:game_end_quit_index+24], 16) == 0: 
+                match_result = 'Ended in Disconnect Menue with a player vote/countdown kick'
+                winning_team_string = 'Unknown (DC)'
+                found_winner = False
 
 
         if found_winner:
