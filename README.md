@@ -24,3 +24,13 @@ Run the application using:
 ```sh
 python main.py
 ```
+
+
+## Limitations
+Game results are only possible because the replay recorder stores the 'self_destruct' message(order) when a player clicks on Surrender, Exit Game, or is kicked via dc vote/countdown. As a result, any game involving a player who gets kicked due to losing their last building or selling it may lead to incorrect results.
+
+If this scenario occurs early in the game, the game result is often still correct if the player exits shortly after being kicked, or by detecting if the player was idle during the remaining part of the game. However, if this occurs near the end of the game, at the point when victory is decided, it can lead to incorrect results — particularly if the winning player exits right away.
+
+Therefore, in such situations, it is recommended that the remaining player(s) stay in the game until it fully ends and continue issuing commands (such as creating units or constructing buildings) in the short period before the victory screen to ensure the game result is recorded correctly.
+
+These limitations are likely to be resolved in the future community patch of the game.
