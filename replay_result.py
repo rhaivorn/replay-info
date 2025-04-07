@@ -472,16 +472,14 @@ def get_replay_info(file_path, mode, rename_info=False):
     actual_replay_end = rep_duration
     actual_end_frame = 0
 
-    # if normal replay end use the sencond last frame as the actual replay duration.
-    last_messages = re.findall(r"00....00000.000000", hex_data[-1000:])
-
-    if len(last_messages) >= 2:
-        index = hex_data.rfind(last_messages[-2])
-        actual_end_frame = hex_to_decimal(hex_data[index-6:index+2]) #get the frame
-
-        # Check condition and update actual_replay_end
-        if abs(actual_end_frame - rep_duration) > 101:
+    if not is_normal_rep:
+        # if game is aborted or crashed, game frame is not stored in header, so try to get it from the last message.
+        last_messages = re.findall(r"00....00000.0000000", hex_data[-1000:])
+        if len(last_messages) >= 1:
+            index = hex_data.rfind(last_messages[-1])
+            actual_end_frame = hex_to_decimal(hex_data[index-6:index+2])
             actual_replay_end = actual_end_frame
+            rep_duration = actual_replay_end
 
     players = {}
     teams = {}
@@ -683,7 +681,9 @@ def get_replay_info(file_path, mode, rename_info=False):
                     player_final_message_frame = players_quit_frames[num_player]['surrender/exit?']
         else:
             player_final_message_frame = players_quit_frames[num_player]['exit']
-
+    else:
+        if last_crc_index != -1:
+            player_final_message_frame = hex_to_decimal(hex_data[last_crc_index-8:last_crc_index])
     
 
     #typical messages (orders) that observer players can also send (needs updating). 
@@ -894,8 +894,8 @@ def get_replay_info(file_path, mode, rename_info=False):
                         match_result = 'Unk (Not enough data)'
                     if not is_normal_rep:
                         match_result = 'DC (Game aborted or crashed)'
-                elif num_player in observer_num_list:
-                    match_result = 'Unk (Failed (Obs quit early or before end patterns))'
+                elif (num_player in observer_num_list) and (num_player in quit_data):
+                    match_result = 'Unk (Not enough data (Obs quit early or before end patterns))'
         else:
             match_result = 'DC at start of game'
 
