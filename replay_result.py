@@ -645,7 +645,7 @@ def get_replay_info(file_path, mode, rename_info=False):
         else:
             quit_data[match_str] = [match.start()]        
 
-    #store sel_destruct message indices with team
+    #store self_destruct message indices (the first occurence) with team details
     teams_data = {team: [quit_data.get(player, [-1])[0] for player in players] for team, players in teams.items()}
 
     last_crc_data = {} #store last crc message indices 
