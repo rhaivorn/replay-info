@@ -5,7 +5,7 @@ import time
 import struct
 import requests
 from io import BytesIO
-import copy
+import hashlib
 
 def read_null_terminated_string(file, encoding='utf-8', return_is_corrupt=False):
     chars = []
@@ -44,6 +44,14 @@ def check_encoding_bytes(input_bytes):
     except Exception as e:
         print(f"Error occurred: {e}")
         return None
+
+
+def is_valid_utf8(byte_string):
+    try:
+        byte_string.decode('utf-8')
+        return True
+    except UnicodeDecodeError:
+        return False
 
 
 def hex_to_decimal(hex_string):
@@ -404,6 +412,38 @@ def sanitize_filename(filename, replacement="_"):
     return cleaned
 
 
+def string_to_md5(input_string):
+    return hashlib.md5(input_string.encode()).hexdigest()
+
+
+def get_match_id(url, start_time, game_sd, match_type, map_crc, player_nicks):
+    """Generate a match id that can be used to uniquely identify all replays of the same game. Useful for those looking 
+    to to scrap and merge match info for analysis or a leaderboard.
+    """
+    # Shatabrick uses the hex of <yyyy-dd-mm><game_sd>, however since the game seed is generated from GetTickCount()
+    # there's a risk of collisions. Therefore, based on sample data scrapped from gt for 2 days, perhaps a better way to 
+    # generate the match id would be by additionally using the match type, map crc and player names(as long as they are 
+    # not corrupt). Player IPs were not used here as there are cases where they are not the same for the same game replay. 
+
+    date_in_replay = datetime.fromtimestamp(start_time, UTC).date()
+    date_uploaded = date_in_replay
+
+    # Extract date from URL (use the server date when file was uploaded)
+    match = re.search(r'/(\d{4})_(\d{2})_[^/]+/(\d{2})_', url)
+    if match:
+        year, month, day = map(int, match.groups())
+        date_uploaded = datetime(year, month, day).date()
+
+    yesterday = date_uploaded - timedelta(days=1)
+    two_days_ago = date_uploaded - timedelta(days=2)
+
+    # Allow date_in_replay to date back up to 2 days prior to the date_uploaded, else use the date_uploaded.
+    if (date_in_replay == yesterday) or (date_in_replay == two_days_ago):
+        return string_to_md5(f"{date_in_replay.strftime('%Y%m%d')}{game_sd}{match_type}{map_crc}{''.join(player_nicks)}")
+    else:
+        return string_to_md5(f"{date_uploaded.strftime('%Y%m%d')}{game_sd}{match_type}{map_crc}{''.join(player_nicks)}")
+
+
 def get_replay_info(file_path, mode, rename_info=False):
     header, hex_data = get_replay_data(file_path, mode)
 
@@ -515,7 +555,7 @@ def get_replay_info(file_path, mode, rename_info=False):
     player_num_list = []
     observer_num_list = []
     pl_count = 0
-
+    player_nicks = []
     for index, player_raw in enumerate(slots_data):
         if (player_raw == 'X') or (player_raw == 'O'):
             continue
@@ -539,6 +579,15 @@ def get_replay_info(file_path, mode, rename_info=False):
                 'dc': disconnect[index],
                 'random': 0,
             }
+
+            pl_nick = player_data[0][1:]
+            if header['is_corrupt']:
+                try:
+                    if not is_valid_utf8(pl_nick.encode('latin-1')):
+                        pl_nick = 'player'
+                except:
+                    pl_nick = 'player'
+            player_nicks.append(pl_nick)
             
             players[pl_count+offset]['random'] = 1 if players[pl_count+offset]['faction'] == -1 else 0
             
@@ -570,6 +619,7 @@ def get_replay_info(file_path, mode, rename_info=False):
                 'random': 0,
             }
 
+            player_nicks.append(comp_name(player_data[0][1:]))
             players[pl_count+offset]['random'] = 1 if players[pl_count+offset]['faction'] == -1 else 0
             
             if int(player_data[2]) != -2:
@@ -921,9 +971,11 @@ def get_replay_info(file_path, mode, rename_info=False):
         # ("Player IP", players[num_player]["ip"]),
         ("Match Result", match_result),
         ("Winning Team", winning_team_string),
-        ('Color', colors.get(players[num_player]['color'], 'Unknown'))
-        
+        ('Color', colors.get(players[num_player]['color'], 'Unknown')) 
     ]
+
+    if mode == 2:
+        replay_info.insert(0, ("Match ID", get_match_id(file_path, start_time, game_sd, match_type, map_crc, player_nicks)))
 
     player_infos = []
     for key, value in players.items():
