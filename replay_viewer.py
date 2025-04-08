@@ -175,7 +175,11 @@ class MyFrame(wx.Frame):
             self.update_file_list(os.path.join(os.environ['USERPROFILE'], 'Documents\\Command and Conquer Generals Zero Hour Data\\Replays'))
             self.dir_path.SetValue(os.path.join(os.environ['USERPROFILE'], 'Documents\\Command and Conquer Generals Zero Hour Data\\Replays'))
             self.rename_all_files_btn.Enable()
-    
+        
+        # Bind right-click events for context menu
+        self.file_list.Bind(wx.EVT_LIST_ITEM_RIGHT_CLICK, self.on_right_click)
+        self.properties_list.Bind(wx.EVT_LIST_ITEM_RIGHT_CLICK, self.on_right_click)
+        self.details_list.Bind(wx.EVT_LIST_ITEM_RIGHT_CLICK, self.on_right_click)
 
     def setup_tab2(self):
         # Create a vertical box sizer for the second tab
@@ -307,6 +311,70 @@ class MyFrame(wx.Frame):
         # Store the full list of online files for filtering
         self.full_online_file_list = []
 
+        # Bind right-click events for context menu
+        self.file_list_tab2.Bind(wx.EVT_LIST_ITEM_RIGHT_CLICK, self.on_right_click)
+        self.properties_list_tab2.Bind(wx.EVT_LIST_ITEM_RIGHT_CLICK, self.on_right_click)
+        self.details_list_tab2.Bind(wx.EVT_LIST_ITEM_RIGHT_CLICK, self.on_right_click)
+
+    
+    def create_copy_menu(self):
+        menu = wx.Menu()
+        copy_item = menu.Append(wx.ID_ANY, "Copy")
+        self.Bind(wx.EVT_MENU, self.on_copy, copy_item)
+        return menu
+
+    
+    def on_right_click(self, event):
+        # Get the row index
+        index = event.GetIndex()
+        ctrl = event.GetEventObject()
+        
+        if isinstance(ctrl, wx.ListCtrl) and index != -1:
+            # Store the selected row for later use
+            self.right_clicked_row = index
+            
+            # Get mouse position relative to the screen
+            position = wx.GetMousePosition()
+            # Convert to client coordinates relative to the list control
+            position = ctrl.ScreenToClient(position)
+            
+            # Use HitTest to determine which column was clicked
+            item, flags, col = ctrl.HitTestSubItem(position)
+            self.right_clicked_column = col
+            
+            # Show the popup menu at the current mouse position
+            # Don't convert the position again - use the original event position
+            self.PopupMenu(self.create_copy_menu())
+
+    
+    def on_copy(self, event):
+        focused_ctrl = wx.Window.FindFocus()
+        if isinstance(focused_ctrl, wx.ListCtrl):
+            if hasattr(self, 'right_clicked_row') and hasattr(self, 'right_clicked_column'):
+                # Copy only the specific cell that was right-clicked
+                item_text = focused_ctrl.GetItem(self.right_clicked_row, self.right_clicked_column).Text
+                clipboard = wx.Clipboard.Get()
+                if clipboard.Open():
+                    clipboard.SetData(wx.TextDataObject(item_text))
+                    clipboard.Close()
+                    
+                # Clean up the attributes after using them
+                del self.right_clicked_row
+                del self.right_clicked_column
+            else:
+                # Fallback to copying the entire row
+                index = focused_ctrl.GetFirstSelected()
+                if index != -1:
+                    row_text = []
+                    for col in range(focused_ctrl.GetColumnCount()):
+                        item_text = focused_ctrl.GetItem(index, col).Text
+                        row_text.append(item_text)
+                    row_text_str = ", ".join(row_text)
+                    clipboard = wx.Clipboard.Get()
+                    if clipboard.Open():
+                        clipboard.SetData(wx.TextDataObject(row_text_str))
+                        clipboard.Close()
+    
     
     def on_select_directory(self, event):
         # Open a directory dialog
