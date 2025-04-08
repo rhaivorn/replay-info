@@ -823,7 +823,7 @@ class MyFrame(wx.Frame):
             idx = self.details_list_tab2.InsertItem(self.details_list_tab2.GetItemCount(), text_values[0])
             for col, value in enumerate(text_values[0:], start=0):
                 self.details_list_tab2.SetItem(idx, col, str(value))
-            self.details_list_tab2.SetItemTextColour(idx, rgb_values[color_name])  # Apply text color
+            self.details_list_tab2.SetItemTextColour(idx, rgb_values.get(color_name, (0, 0, 0)))  # Apply text color
             # self.details_list.SetItemFont(idx, bold_font)
             
     
