@@ -175,9 +175,8 @@ def get_pl_num_offset(player_slot, slots_data, hex_data):
     pl_num_from_first_crc = []
     index_of_first_crc = hex_data.find("00470400000")
     if index_of_first_crc != -1:
-        timecode_first_crc = hex_to_decimal(hex_data[index_of_first_crc-6:index_of_first_crc+2])
-        timecode_hex = bytearray(timecode_first_crc.to_bytes(4, byteorder='little')).hex()
-        first_check = set(re.findall(f"{timecode_hex}470400000.", hex_data))
+        frame_hex = hex_data[index_of_first_crc-6:index_of_first_crc+2]
+        first_check = set(re.findall(f"{frame_hex}470400000.", hex_data))
         
         if first_check and len(first_check)>1:
             for ck in sorted(first_check):
@@ -261,12 +260,12 @@ def find_winning_team(teams_data):
 
 
 def extract_frame(hex_data, index):
-    """Extract frame value at given self_destruct message index in replay."""
+    """Extract frame value at given message index in replay."""
     return hex_to_decimal(hex_data[index-8:index])
 
 
 def extract_crc(hex_data, index):
-    """Extract CRC value at given last crc message index in replay."""
+    """Extract CRC value at given crc message index in replay."""
     return hex_to_decimal(hex_data[index+34:index+44])
 
 
@@ -774,24 +773,15 @@ def get_replay_info(file_path, mode, rename_info=False):
                 found_winner = False
 
 
-        if found_winner:
-            #if there is a winning team and match did not end in DC kick, and this replay's player stayed till the end (winner or loser), 
-            #we can actually detect if an exit occured after a last building/sell kick. Here we place an asterisk, next to the match result 
-            #as this result might not be correct.
-            add = ''
-            # if num_player not in quit_data:
-            #     if hex_to_decimal(last_crc_frame) >= 1000:
-            #         if hex_to_decimal(last_crc_frame) - extract_frame(hex_data, game_end_quit_index) <= 200:
-            #             add = '*' # Someone exited after last building/sell kick (winner? or loser?)
-            
+        if found_winner:            
             #if there is a winner, update players match result to win or loss
             if num_player in player_num_list:
                 if num_player in teams[winning_team]:
-                    match_result = f'Win{add}'
+                    match_result = f'Win'
                 else:
-                    match_result = f'Loss{add}'                       
+                    match_result = f'Loss'                       
             elif num_player in observer_num_list:
-                match_result = f'Team {winning_team} won{add}'
+                match_result = f'Team {winning_team} won'
 
     elif match_result=='':
         # Pattern 1
@@ -842,9 +832,9 @@ def get_replay_info(file_path, mode, rename_info=False):
                 if len(all_crc) < 2:
                     last_check_frame = 0
                 elif match_result!='Unknown 3' and len(all_crc) >= 3:
-                    last_check_frame = bytearray(hex_to_decimal(all_crc[-3][:8]).to_bytes(4, byteorder='little')).hex()
+                    last_check_frame = all_crc[-3][:8]
                 else:
-                    last_check_frame = bytearray(hex_to_decimal(all_crc[-2][:8]).to_bytes(4, byteorder='little')).hex()
+                    last_check_frame = all_crc[-2][:8]
                     
                 pl_msges = re.findall('00....00000.000000', hex_data[hex_data.rfind(f"{last_check_frame}470400000"):])
                 pl_msges = [s for s in pl_msges if not any(s.startswith(pattern) for pattern in patterns)]
