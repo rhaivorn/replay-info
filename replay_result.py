@@ -495,9 +495,9 @@ def get_replay_info(file_path, mode, rename_info=False):
     game_sd = int(match_data.get('SD', 'Unknown'))
     crc_interval = match_data.get('C', 'Unknown')
     sw_restriction = match_data.get('SR', 'Unknown')
-    if sw_restriction == 0:
+    if sw_restriction == '0':
         sw_restriction = 'Yes'
-    elif sw_restriction == 1:
+    elif sw_restriction == '1':
         sw_restriction = 'No'
     else:
         sw_restriction = 'Unknown'
