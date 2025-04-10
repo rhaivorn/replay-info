@@ -59,19 +59,19 @@ def hex_to_decimal(hex_string):
     return int_value
 
 
-def assign_random_faction(prng, total_factions, game_sd):
+def assign_random_faction(game_prng, total_factions, game_sd):
     discard = game_sd % 7
     for _ in range(discard):
-        prng.get_value(0, 1)  # Discard values to improve randomness
+        game_prng.get_value(0, 1)  # Discard values to improve randomness
 
-    faction_index = prng.get_value(0, 1000) % total_factions
+    faction_index = game_prng.get_value(0, 1000) % total_factions
     return faction_index
 
 
-def assign_random_color(prng, total_colors, taken_colors):
+def assign_random_color(game_prng, total_colors, taken_colors):
     color_index = -1
     while color_index == -1:
-        random_color = prng.get_value(0, total_colors - 1)
+        random_color = game_prng.get_value(0, total_colors - 1)
         if not taken_colors[random_color]:
             color_index = random_color
             taken_colors[random_color] = True
@@ -356,8 +356,6 @@ def update_players_data(num_player, hex_data, quit_data, teams, teams_data, winn
                 else:
                     player_data['surrender'] = frame_time
 
-            # Uncertain quit type
-            # player_data['surrender/exit?'] = frame_time
             continue
             
         player_data['exit'] = frame_time
