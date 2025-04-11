@@ -720,18 +720,17 @@ def get_replay_info(file_path, mode, rename_info=False):
 
     player_final_message_frame = actual_replay_end
     if num_player in quit_data:
-        if len(quit_data[num_player]) == 1:
-            if players_quit_frames[num_player]['surrender'] == 0:
-                if players_quit_frames[num_player]['exit'] != 0:
-                    player_final_message_frame = players_quit_frames[num_player]['exit']
-                elif players_quit_frames[num_player]['surrender/exit?'] != 0:
-                    player_final_message_frame = players_quit_frames[num_player]['surrender/exit?']
-            else:
-                # this replay's player surrendered and stayed till the end, so use the last logic crc frame when checking for idle players
-                if last_crc_index != -1:
-                    player_final_message_frame = hex_to_decimal(hex_data[last_crc_index-8:last_crc_index])
-        else:
-            player_final_message_frame = players_quit_frames[num_player]['exit']
+        # if len(quit_data[num_player]) == 1:
+        #     if players_quit_frames[num_player]['surrender'] == 0:
+        #         if players_quit_frames[num_player]['exit'] != 0:
+        #             player_final_message_frame = players_quit_frames[num_player]['exit']
+        #         elif players_quit_frames[num_player]['surrender/exit?'] != 0:
+        #             player_final_message_frame = players_quit_frames[num_player]['surrender/exit?']
+        #     else:
+        #         player_final_message_frame = players_quit_frames[num_player]['surrender']
+        # else:
+        #     player_final_message_frame = players_quit_frames[num_player]['exit']
+        player_final_message_frame = extract_frame(hex_data, max(quit_data[num_player]))
     else:
         if last_crc_index != -1:
             player_final_message_frame = hex_to_decimal(hex_data[last_crc_index-8:last_crc_index])
