@@ -784,17 +784,30 @@ def get_replay_info(file_path, mode, rename_info=False):
     if update_players_data_again:
         for key, value in idle_kick.items():
             csg_msgs = re.findall(f'00e90300000{key:x}000000020201030101'+r'(.{8})', hex_data)
+            counts = {}
+            for fr in csg_msgs:
+                if fr in counts:
+                    counts[fr] += 1
+                else:
+                    counts[fr] = 1
             kicked_pl_objects = []
-            for x in csg_msgs:
-                kicked_pl_objects.append(hex_to_decimal(x))
+            for fr, count in counts.items():
+                if count>= 5:
+                    kicked_pl_objects.append(hex_to_decimal(fr))
             ao_msgs = re.findall(f'......00230400000.000000010301........', hex_data[495648:])
             check_pl_objects = []
             for x in ao_msgs:
                 check_pl_objects.append(hex_to_decimal(x[-8:]))
             for x in reversed(check_pl_objects):
                 if x in kicked_pl_objects:
-                    idle_kick[key]['frame'] = hex_to_decimal(ao_msgs[check_pl_objects.index(x)][:8])
-                    quit_data[key][0] = hex_data.find(ao_msgs[check_pl_objects.index(x)][8:])
+                    idx = hex_data.find(ao_msgs[check_pl_objects.index(x)][8:])
+                    if len(quit_data[key]) == 2:
+                        if idx < quit_data[key][1]:
+                            idle_kick[key]['frame'] = hex_to_decimal(ao_msgs[check_pl_objects.index(x)][:8])
+                            quit_data[key][0] = hex_data.find(ao_msgs[check_pl_objects.index(x)][8:])
+                    else:
+                        idle_kick[key]['frame'] = hex_to_decimal(ao_msgs[check_pl_objects.index(x)][:8])
+                        quit_data[key][0] = idx
                     break
         for key, value in players.items():
             if players_quit_frames[key]['idle/kicked?']!=0:
