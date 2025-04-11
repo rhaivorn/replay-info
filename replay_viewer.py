@@ -665,7 +665,7 @@ class MyFrame(wx.Frame):
                         divisor = 1
                         if 'K' not in file_size:
                             divisor = 1024
-                        file_size_numeric = int(re.sub(r'\D', '', file_size))/divisor
+                        file_size_numeric = float(re.sub(r'[^\d.]', '', file_size))/divisor
                         gt_files.append([file_name, file_size_numeric, date_time])
 
                 # Update the file list
