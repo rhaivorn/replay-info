@@ -728,7 +728,7 @@ def get_replay_info(file_path, mode, rename_info=False):
                     player_final_message_frame = players_quit_frames[num_player]['surrender/exit?']
             else:
                 if last_crc_index != -1:
-                     player_final_message_frame = hex_to_decimal(hex_data[last_crc_index-8:last_crc_index])
+                    player_final_message_frame = hex_to_decimal(hex_data[last_crc_index-8:last_crc_index])
         else:
             player_final_message_frame = players_quit_frames[num_player]['exit']
     else:
