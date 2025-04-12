@@ -738,7 +738,7 @@ def get_replay_info(file_path, mode, rename_info=False):
 
     #typical messages (orders) that observer players can also send (needs updating). 
     #pattern: 00xxxxxxxx0 (messages are 4 bytes only but we include msb of frame and first 4bits of player num, as they are always 0, to imporve search)
-    patterns = ["001b0000000", "00470400000", "00490400000", "00eb0300000", "00e90300000", "00220400000", "00450400000", "00f80300000", "00f90300000", "00fa0300000", "00fb0300000", "00fc0300000", "00fd0300000", "00fe0300000", "00ff0300000", "00000400000", "00010400000", ]
+    patterns = ["001b0000000", "00470400000", "00490400000", "00330400000", "00eb0300000", "00e90300000", "00220400000", "00450400000", "00f80300000", "00f90300000", "00fa0300000", "00fb0300000", "00fc0300000", "00fd0300000", "00fe0300000", "00ff0300000", "00000400000", "00010400000", ]
 
     #look for idle players that most likely got kicked (needs more testing). Note: Frame(timestamp) will not necessarily correspond to the moment of kick, but around that time depending on the scenario (Eg. player has useless last buildings and is just hiding and waiting to be kicked, actual kick cold be way later, but will be considered idle the moment the player cant really impact others in the game (this might impact placement results)). 
     update_players_data_again = False
