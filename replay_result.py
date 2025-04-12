@@ -794,7 +794,7 @@ def get_replay_info(file_path, mode, rename_info=False):
             for fr, count in counts.items():
                 if count>= 5:
                     kicked_pl_objects.append(hex_to_decimal(fr))
-            ao_msgs = re.findall(f'......00230400000.000000010301........', hex_data[495648:])
+            ao_msgs = re.findall(f'......00230400000.000000010301........', hex_data[value['index']:])
             check_pl_objects = []
             for x in ao_msgs:
                 check_pl_objects.append(hex_to_decimal(x[-8:]))
