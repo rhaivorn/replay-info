@@ -756,29 +756,29 @@ def get_replay_info(file_path, mode, rename_info=False):
                                 if int(msg[11:12], 16) == key:
                                     msg_index = hex_data.rfind(msg)
                                     msg_frame = hex_to_decimal(hex_data[msg_index-6: msg_index+2])
-
-                                    if found_winner:
-                                        diff = 900
-                                    else:
-                                        diff = 1800
-                                    
-                                    if (player_final_message_frame - msg_frame) >=900:
-                                        if (value['exit'] != 0) and ((value['exit'] - msg_frame) >= 1200):
-                                            value['idle/kicked?'] = msg_frame
-                                            quit_data[key].insert(0, msg_index+2)
-                                            idle_kick.setdefault(key, {})['index'] = msg_index+2
-                                            update_players_data_again = True
-                                        elif (value['surrender/exit?'] != 0) and ((value['surrender/exit?'] - msg_frame) >= 1800):
-                                            value['idle/kicked?'] = msg_frame
-                                            quit_data[key].insert(0, msg_index+2)
-                                            idle_kick.setdefault(key, {})['index'] = msg_index+2
-                                            update_players_data_again = True
-                                        elif (key not in quit_data) and (player_final_message_frame-msg_frame >= diff):
-                                            value['idle/kicked?'] = msg_frame
-                                            quit_data[key] = [msg_index+2]
-                                            idle_kick.setdefault(key, {})['index'] = msg_index+2
-                                            update_players_data_again = True
-                                    break
+                                    if msg_frame <= player_final_message_frame:
+                                        if found_winner:
+                                            diff = 900
+                                        else:
+                                            diff = 1800
+                                        
+                                        if (player_final_message_frame - msg_frame) >=900:
+                                            if (value['exit'] != 0) and ((value['exit'] - msg_frame) >= 1200):
+                                                value['idle/kicked?'] = msg_frame
+                                                quit_data[key].insert(0, msg_index+2)
+                                                idle_kick.setdefault(key, {})['index'] = msg_index+2
+                                                update_players_data_again = True
+                                            elif (value['surrender/exit?'] != 0) and ((value['surrender/exit?'] - msg_frame) >= 1800):
+                                                value['idle/kicked?'] = msg_frame
+                                                quit_data[key].insert(0, msg_index+2)
+                                                idle_kick.setdefault(key, {})['index'] = msg_index+2
+                                                update_players_data_again = True
+                                            elif (key not in quit_data) and (player_final_message_frame-msg_frame >= diff):
+                                                value['idle/kicked?'] = msg_frame
+                                                quit_data[key] = [msg_index+2]
+                                                idle_kick.setdefault(key, {})['index'] = msg_index+2
+                                                update_players_data_again = True
+                                        break
 
     
     if update_players_data_again:
