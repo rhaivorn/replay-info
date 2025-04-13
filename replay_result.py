@@ -509,14 +509,18 @@ def get_replay_info(file_path, mode, rename_info=False):
     actual_replay_end = rep_duration
     actual_end_frame = 0
 
+    valid_msgs = ['e9030000', 'ea030000', 'eb030000', 'ec030000', 'ed030000', 'ee030000', 'ef030000', 'f0030000', 'f1030000', 'f2030000', 'f3030000', 'f4030000', 'f5030000', 'f6030000', 'f7030000', 'f8030000', 'f9030000', 'fa030000', 'fb030000', 'fc030000', 'fd030000', 'fe030000', 'ff030000', '00040000', '01040000', '02040000', '03040000', '04040000', '05040000', '06040000', '07040000', '08040000', '09040000', '0a040000', '0b040000', '0c040000', '0d040000', '0e040000', '0f040000', '10040000', '11040000', '12040000', '13040000', '14040000', '15040000', '16040000', '17040000', '18040000', '19040000', '1a040000', '1b040000', '1c040000', '1d040000', '1e040000', '1f040000', '20040000', '21040000', '22040000', '23040000', '24040000', '25040000', '26040000', '27040000', '28040000', '29040000', '2a040000', '2b040000', '2c040000', '2d040000', '2e040000', '2f040000', '30040000', '31040000', '32040000', '33040000', '34040000', '35040000', '36040000', '37040000', '38040000', '39040000', '3a040000', '3b040000', '3c040000', '3d040000', '3e040000', '3f040000', '40040000', '41040000', '42040000', '43040000', '44040000', '45040000', '46040000', '47040000', '48040000', '49040000']
     if not is_normal_rep:
         # if game is aborted or crashed, game frame is not stored in header, so try to get it from the last message.
         last_messages = re.findall(r"00....00000.0000000", hex_data[-1000:])
         if len(last_messages) >= 1:
-            index = hex_data.rfind(last_messages[-1])
-            actual_end_frame = hex_to_decimal(hex_data[index-6:index+2])
-            actual_replay_end = actual_end_frame
-            rep_duration = actual_replay_end
+            for x in reversed(last_messages):
+                if x[2:10] in valid_msgs:
+                    index = hex_data.rfind(x)
+                    actual_end_frame = hex_to_decimal(hex_data[index-6:index+2])
+                    actual_replay_end = actual_end_frame
+                    rep_duration = actual_replay_end
+                    break
 
     players = {}
     teams = {}
@@ -753,7 +757,7 @@ def get_replay_info(file_path, mode, rename_info=False):
                         pl_msges = [s for s in pl_msges if not any(s.startswith(pattern) for pattern in patterns)]
                         if len(pl_msges) >=1:
                             for msg in reversed(pl_msges):
-                                if int(msg[11:12], 16) == key:
+                                if (int(msg[11:12], 16) == key) and (msg[2:10] in valid_msgs):
                                     msg_index = hex_data.rfind(msg)
                                     msg_frame = hex_to_decimal(hex_data[msg_index-6: msg_index+2])
                                     if msg_frame <= player_final_message_frame:
@@ -950,9 +954,10 @@ def get_replay_info(file_path, mode, rename_info=False):
                 if pl_msges:
                     win_pl = None
                     for msg in reversed(pl_msges):
-                        win_pl = int(msg[11:12], 16)
-                        if win_pl in player_num_list:
-                            break
+                        if msg[2:10] in valid_msgs:
+                            win_pl = int(msg[11:12], 16)
+                            if win_pl in player_num_list:
+                                break
                     if (win_pl in player_num_list) and (len(remaining_teams)==2):
                         winning_team = players[win_pl]['team']
 
