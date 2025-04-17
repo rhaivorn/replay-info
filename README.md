@@ -1,7 +1,7 @@
 # Replay Info 1.0.0
 
 ## Overview
-A simple gui application application that allows Zero Hour players to easily view replay information from local replay files as well as replays stored in Gentool.
+A simple gui application that allows Zero Hour players to easily view replay information from local replay files as well as replays stored in Gentool.
 
 ## Key Features
 
