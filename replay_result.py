@@ -6,6 +6,7 @@ import struct
 import requests
 from io import BytesIO
 import hashlib
+import wx
 
 def read_null_terminated_string(file, encoding='utf-8', return_is_corrupt=False):
     chars = []
@@ -117,8 +118,8 @@ def parse_replay_data(f):
     """Well, actually just parse the header and return it along with the rest."""
     magic = f.read(6)
     if magic != b'GENREP':
-        # print("Not a GENREP file!")
-        return
+        wx.MessageBox(f"Not a GENREP file!", "Error", wx.OK | wx.ICON_WARNING)
+        return [], []
     begin_timestamp, end_timestamp, replay_duration = struct.unpack('<III', f.read(12))
     desync, early_quit = struct.unpack('<BB', f.read(2))
     disconnect = struct.unpack('<8B', f.read(8))
@@ -418,7 +419,7 @@ def get_match_id(url, start_time, game_sd, match_type, map_crc, player_nicks):
     """Generate a match id that can be used to uniquely identify all replays of the same game. Useful for those looking 
     to to scrap and merge match info for analysis or a leaderboard.
     """
-    # Shatabrick uses the hex of <yyyy-dd-mm><game_sd>, however since the game seed is generated from GetTickCount()
+    # Shatabrick uses the hex of <yyyyddmm><game_sd>, however since the game seed is generated from GetTickCount()
     # there's a risk of collisions. Therefore, based on sample data scrapped from gt for 2 days, perhaps a better way to 
     # generate the match id would be by additionally using the match type, map crc and player names(as long as they are 
     # not corrupt). Player IPs were not used here as there are cases where they are not the same for the same game replay. 
@@ -441,10 +442,25 @@ def get_match_id(url, start_time, game_sd, match_type, map_crc, player_nicks):
     else:
         return string_to_md5(f"{date_uploaded.strftime('%Y%m%d')}{game_sd}{match_type}{map_crc}{''.join(player_nicks)}")
 
+def offset_systemtime_utc(systemtime_date, utc_date):
+    """Calculate zone offset, using player's windows SYSTEMTIME and start utc timestamp."""
+    year, month, _, day, hour, minute, second, millis = systemtime_date
+    windows_dt = datetime(year, month, day, hour, minute, second, millis * 1000)
+
+    utc_dt = datetime.fromtimestamp(utc_date)
+    
+    offset_minutes = int((windows_dt - utc_dt).total_seconds() // 60)
+    
+    sign = '+' if offset_minutes >= 0 else '-'
+    hours, minutes = divmod(abs(offset_minutes), 60)
+    
+    return f"UTC{sign}{hours}" if minutes == 0 else f"UTC{sign}{hours}:{minutes:02}"
+
 
 def get_replay_info(file_path, mode, rename_info=False):
     header, hex_data = get_replay_data(file_path, mode)
-
+    if not header and not hex_data:
+        return None
     start_time = header['begin_timestamp']
     end_time = header['end_timestamp']
     rep_duration = header['replay_duration']
@@ -744,7 +760,7 @@ def get_replay_info(file_path, mode, rename_info=False):
     #pattern: 00xxxxxxxx0 (messages are 4 bytes only but we include msb of frame and first 4bits of player num, as they are always 0, to imporve search)
     patterns = ["001b0000000", "00470400000", "00490400000", "00330400000", "00eb0300000", "00e90300000", "00220400000", "00450400000", "00f80300000", "00f90300000", "00fa0300000", "00fb0300000", "00fc0300000", "00fd0300000", "00fe0300000", "00ff0300000", "00000400000", "00010400000", ]
 
-    #look for idle players that most likely got kicked (needs more testing). Note: Frame(timestamp) will not necessarily correspond to the moment of kick, but around that time depending on the scenario (Eg. player has useless last buildings and is just hiding and waiting to be kicked, actual kick cold be way later, but will be considered idle the moment the player cant really impact others in the game (this might impact placement results)). 
+    # look for idle players that most likely got kicked 
     update_players_data_again = False
     idle_kick = {}
     if player_final_message_frame >= 5400: #if replay is greater than 3 minutes
@@ -845,20 +861,20 @@ def get_replay_info(file_path, mode, rename_info=False):
     match_result = ''
     winning_team_string = ''
 
-    if (desync == 1 and found_winner): #sometimes desync occurs at the end of the game?
+    if len(teams) == 1:
+        found_winner = False
+        match_result = 'No Result (No opponents)'
+        winning_team_string = 'No Result (No opponents)'
+    elif computer_player_in_game:
+        found_winner = False
+        match_result = 'No Result (No data from computer player)'
+        winning_team_string = 'No Result (No data from computer player)'
+    elif (desync == 1 and found_winner): #sometimes desync occurs at the end of the game?
         winning_team_string = f"{winning_team}"
     elif desync == 1:
         found_winner = False
         match_result = 'Desync'
         winning_team_string = 'No Result (Desync)'
-    elif computer_player_in_game:
-        found_winner = False
-        match_result = 'No Result (No data from computer player)'
-        winning_team_string = 'No Result (No data from computer player)'
-    elif len(teams) == 1:
-        found_winner = False
-        match_result = 'No Result (No opponents)'
-        winning_team_string = 'No Result (No opponents)'
 
     if found_winner:
         winning_team_string = winning_team
@@ -1012,6 +1028,7 @@ def get_replay_info(file_path, mode, rename_info=False):
 
     replay_info = [
         ("Start Time (UTC)", time.strftime("%A, %B %d, %Y at %I:%M %p", time.gmtime(start_time))),
+        ("Player Timezone", offset_systemtime_utc(header['system_time'], start_time)),
         ("Version String", version),
         ("Build Date", header["build_date"]),
         ("EXE check (1.04)", exe_check),
