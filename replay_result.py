@@ -702,7 +702,7 @@ def get_replay_info(file_path, mode, rename_info=False):
             teams_filename.append(teams_filename_string)
 
         teams_filename_string = 'vs '.join(teams_filename).strip()
-        return sanitize_filename(f"{match_type} [{datetime.fromtimestamp(start_time, UTC).strftime("%y.%m.%d")}] ({map_name}) {teams_filename_string}")
+        return sanitize_filename(f"{match_type} ({datetime.fromtimestamp(start_time, UTC).strftime("%y.%m.%d")}) {map_name} {teams_filename_string}")
 
     quit_data = {} #store self_destruct message indices
     for match in re.finditer(r'450400000.000000010201', hex_data):
