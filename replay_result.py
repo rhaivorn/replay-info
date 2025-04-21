@@ -330,7 +330,7 @@ def update_players_data(num_player, hex_data, quit_data, teams, teams_data, winn
         if player_num != num_player and num_player in quit_data:
 
             # Winning players at the end can only exit
-            if (found_winner) and (player_num in teams[winning_team]):
+            if (found_winner) and (player_num in teams[winning_team]) and len(teams)>1:
                 if quit_indices[0] > max_losers_index:
                     player_data['exit'] = frame_time
                     continue
