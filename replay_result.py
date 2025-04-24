@@ -893,15 +893,27 @@ def get_replay_info(file_path, mode, rename_info=False):
                 found_winner = False
 
 
-        if found_winner:            
+        if found_winner:
+            # Note: If there is a winning team and the match did not end in DC kick, and if this replay's player stayed till the 
+            # end (winner or loser), we can actually detect if an exit occured after a last building/sell kick scenario. 
+            # Here we flag this game, as this result might not be correct. This is important when merging replay info to correctly 
+            # flag games where an inncorrect result can occur. (for both this and the unknown scenario below, perhaps we can also
+            # make use of sell check to determine results by detecting who sold a building in the last moments of the game, 
+            # however this does not seem like a great idea, and is therefore not implemented here.)
+            check_rep = ''
+            if (game_end_quit_index not in idle_kick_index) and (num_player not in quit_data) and (last_crc_frame):
+                if hex_to_decimal(last_crc_frame) >= 1000:
+                    if hex_to_decimal(last_crc_frame) - extract_frame(hex_data, game_end_quit_index) <= 200:
+                        check_rep = ' (Check Result Manually)' # Someone exited after last building/sell kick (the winner? or the loser?)
+
             #if there is a winner, update players match result to win or loss
             if num_player in player_num_list:
                 if num_player in teams[winning_team]:
-                    match_result = f'Win'
+                    match_result = f'Win{check_rep}'
                 else:
-                    match_result = f'Loss'                       
+                    match_result = f'Loss{check_rep}'                       
             elif num_player in observer_num_list:
-                match_result = f'Team {winning_team} won'
+                match_result = f'Team {winning_team} won{check_rep}'
 
     elif match_result=='':
         # Pattern 1
