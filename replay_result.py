@@ -1037,7 +1037,15 @@ def get_replay_info(file_path, mode, rename_info=False):
         # Create a placement dictionary with ranks
         placement = {team: ordinal(rank) for rank, team in enumerate(
             [winning_team] + [team for team, _ in other_teams_rank], start=1)}
-
+    elif len(teams) > 2:
+        other_teams_rank = sorted(
+            [(team, max(times)) for team, times in teams_data.items() if -1 not in times],
+            key=lambda x: x[1], 
+            reverse=True
+        )
+        placement = {team: ordinal(rank) for rank, team in enumerate(
+            [team for team, _ in other_teams_rank], start=len(teams)-len(other_teams_rank)+1)}
+        
     replay_info = [
         ("Start Time (UTC)", time.strftime("%A, %B %d, %Y at %I:%M %p", time.gmtime(start_time))),
         ("Player Timezone", offset_systemtime_utc(header['system_time'], start_time)),
