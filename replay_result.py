@@ -880,7 +880,8 @@ def get_replay_info(file_path, mode, rename_info=False):
         winning_team_string = winning_team
 
         # frame time where victory occurs
-        game_end_quit_index = max([max(times) for team, times in teams_data.items() if team != winning_team])
+        # game_end_quit_index = max([max(times) for team, times in teams_data.items() if team != winning_team])
+        quit_team, quit_pl_idx ,game_end_quit_index = max(((key, idx, val) for key, values in teams_data.items() if key != winning_team for idx, val in enumerate(values)), key=lambda x: x[2])
 
         # if argument of self_destruct msg command is false, means a vote/countdown kick occured.
         # (eg in 1v1 both players replay would declare them as winners if this was not taken into account, 
@@ -899,9 +900,10 @@ def get_replay_info(file_path, mode, rename_info=False):
             # Here we flag this game, as this result might not be correct. This is important when merging replay info to correctly 
             # flag games where an inncorrect result can occur. (for both this and the unknown scenario below, perhaps we can also
             # make use of sell check to determine results by detecting who sold a building in the last moments of the game, 
-            # however this does not seem like a great idea, and is therefore not implemented here.) Note: Might flag some games where disconnect occured after victory frame.
+            # however this does not seem like a great idea, and is therefore not implemented here.) Note: Might possibly flag some games where disconnect occured after victory frame.
             check_rep = ''
-            if (game_end_quit_index not in idle_kick_index) and (num_player not in quit_data) and (last_crc_frame) and (is_normal_rep) and (hex_data.rfind(f"0000000200010201{last_crc}00{hex_data[-26:-18]}1b0000000{num_player:x}00000000") != -1):
+            temp_list = [-1 if item > game_end_quit_index else item for item in teams_data[winning_team]]
+            if (game_end_quit_index not in idle_kick_index) and (num_player not in quit_data) and (last_crc_frame) and (players_quit_frames[teams[quit_team][quit_pl_idx]]['surrender']==0) and (is_normal_rep) and (hex_data.rfind(f"0000000200010201{last_crc}00{hex_data[-26:-18]}1b0000000{num_player:x}00000000") != -1) and (temp_list.count(-1)==1):
                 if hex_to_decimal(last_crc_frame) >= 1000:
                     if hex_to_decimal(last_crc_frame) - extract_frame(hex_data, game_end_quit_index) <= 200:
                         check_rep = ' (Check Result Manually)' # Someone exited after last building/sell kick (the winner? or the loser?)
