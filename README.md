@@ -1,7 +1,7 @@
 # Replay Info 1.0.0
 
 ## Overview
-A simple gui application that allows Zero Hour players to easily view replay information from local replay files as well as replays stored in Gentool.
+A simple gui application that allows Generals Zero Hour players to easily view replay information from local replay files as well as replays stored in Gentool.
 
 ## Key Features
 
@@ -9,7 +9,7 @@ A simple gui application that allows Zero Hour players to easily view replay inf
   View information of replays stored both locally and online, including player factions, match results, and other game metadata.
 
 - **Batch Replay Renaming**  
-  Automatically rename local replay files in bulk using the format: `match_type (yy-mm-dd) map_name player_name(faction) vs player_name(faction)` for easy identification.
+  Automatically rename local replay files in bulk for easy identification.
 
 - **Gentool Multi-Directory Replay Browsing**  
   Access replay data from **multiple** gentool directories covering the last **70 days**.  
@@ -43,7 +43,7 @@ python main.py
 ## Limitations
 Game results are only possible because the replay recorder stores the 'self_destruct' message(order) when a player clicks on Surrender, Exit Game, or is kicked via dc vote/countdown. As a result, any game involving a player who gets kicked due to losing their last building or selling it may lead to incorrect results.
 
-If this scenario occurs early in the game, the game result is often still correct if the player exits shortly after being kicked, or by detecting if the player was idle during the remaining part of the game to obtain the closest frame where the kick occured. However, if this occurs near the end of the game, at the point when victory is decided, it can lead to incorrect results — particularly if the winning player exits right away.
+If this scenario occurs early in the game, the game result is often still correct if the player exits shortly after being kicked, or by detecting if the player was idle during the remaining part of the game to obtain the closest frame where the kick occured. However, if this occurs near the end of the game, at the point when victory is decided, it can lead to incorrect results — particularly if the winning player exits right away. (This scenario can be detected in replays where the player stayed till the end screen without exiting.)
 
 Therefore, in such situations, it is recommended that the remaining player(s) stay in the game until it fully ends and continue issuing commands (such as creating units or constructing buildings) in the short period after kicking the opponent and before the victory screen to ensure the game result can be determined accurately.
 
