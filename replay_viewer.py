@@ -1627,7 +1627,7 @@ class MyFrame(wx.Frame):
         self.notebook.AddPage(self.tab2, "Gentool Replays")
         
         self.SetSize(1300, 700)
-        self.SetTitle("Replay Info v1.0")
+        self.SetTitle("Replay Info v1.1")
         self.Centre()
         self.Show(True)
 
