@@ -508,7 +508,7 @@ class ReplayResultParser:
         to_check = [(team, player, quit_idx) for team, member in self.teams.items() if team == self.winning_team for player, quit_idx in member.items()]
         if self.check_rep:    
             if quit_pl_num in self.idle_kick_data:
-                self.check_rep = ' (Check Result Manually) (Most likely Correct)'
+                self.check_rep = ' (Check Result Manually)'
             else:
                 self.check_rep = ' (Check Result Manually) (Correct if loser exited else incorrect)'
         
