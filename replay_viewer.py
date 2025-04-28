@@ -3,15 +3,18 @@ import time
 import shutil
 import re
 from datetime import datetime, timezone, timedelta, date
-import wx
-import wx.adv
 import sqlite3
-import requests
-from bs4 import BeautifulSoup
 from urllib.parse import unquote, quote
 from multiprocessing import Pool
 import threading
+
+import wx
+import wx.adv
+import requests
+from bs4 import BeautifulSoup
+
 import replay_result
+from version_config import version_config
 
 class SortableListCtrl(wx.ListCtrl):
     def __init__(self, parent, columns, style=wx.LC_REPORT | wx.BORDER_SUNKEN, with_icons=False, force_string_sort_cols=None):
@@ -394,9 +397,15 @@ class ReplayBrowserTab(wx.Panel):
         item_type = self.file_list.GetItemData(index)
         if item_type == 0:  # Parent directory
             parent_dir = os.path.dirname(self.current_directory)
+            self.properties_list.DeleteAllItems()
+            self.details_list.DeleteAllItems()
+            self.search_ctrl.Clear()
             self.load_directory(parent_dir)
         elif item_type == 1:  # Directory
             new_dir = os.path.join(self.current_directory, self.file_list.GetItemText(index))
+            self.properties_list.DeleteAllItems()
+            self.details_list.DeleteAllItems()
+            self.search_ctrl.Clear()
             self.load_directory(new_dir)
     
     def on_search(self, event):
@@ -505,9 +514,9 @@ class ReplayBrowserTab(wx.Panel):
                     current_id = self.fetch_id
                     if self.tab_type == "local":
                         if os.path.exists(self.selected_file_path):
-                            threading.Thread(target=self.fetch_info, args=(self.selected_file_path, 1, current_id), daemon=True).start()
+                            threading.Thread(target=self.fetch_info, args=(self.selected_file_path, 'local', current_id), daemon=True).start()
                     elif self.tab_type == 'online':
-                        threading.Thread(target=self.fetch_info, args=(self.selected_file_path, 2, current_id), daemon=True).start()
+                        threading.Thread(target=self.fetch_info, args=(self.selected_file_path, 'online', current_id), daemon=True).start()
         else:
             self.action_btn.Disable()
             if self.tab_type == "local":
@@ -556,44 +565,37 @@ class ReplayBrowserTab(wx.Panel):
                     current_id = self.fetch_id
                     if self.tab_type == "local":
                         if os.path.exists(self.selected_file_path):
-                            threading.Thread(target=self.fetch_info, args=(self.selected_file_path, 1, current_id), daemon=True).start()
+                            threading.Thread(target=self.fetch_info, args=(self.selected_file_path, 'local', current_id), daemon=True).start()
                     elif self.tab_type == 'online':
-                        threading.Thread(target=self.fetch_info, args=(self.selected_file_path, 2, current_id), daemon=True).start()
+                        threading.Thread(target=self.fetch_info, args=(self.selected_file_path, 'online', current_id), daemon=True).start()
     
-    def fetch_info(self, selected_file, mode,  fetch_id):
+    def fetch_info(self, selected_file, mode, fetch_id):
         # If fetch ID is outdated, cancel
         if fetch_id != self.fetch_id:
             return
+        file_prop = None
+        player_info = None
         try:
             if selected_file.lower().endswith('.rep'):
-                display_data = replay_result.get_replay_info(selected_file, mode)
+                rep1 = replay_result.ReplayResultParser(selected_file, mode)
+                file_prop = rep1.get_replay_info_gui()
+                player_info = rep1.get_players_info_gui()
         except Exception as e:
-            display_data = []
-            wx.MessageBox(f"Error displaying file properties: {str(e)}", "Error", wx.OK | wx.ICON_ERROR)
-        if display_data:
-            wx.CallAfter(self.display_file_properties, display_data, fetch_id)
+            wx.MessageBox(f"Error: {str(e)}", "Error", wx.OK | wx.ICON_ERROR)
+        if file_prop and player_info :
+            wx.CallAfter(self.display_file_properties, file_prop, player_info, fetch_id)
         else:
             self.properties_list.DeleteAllItems()
             self.details_list.DeleteAllItems()
 
-    def display_file_properties(self, display_data, fetch_id):
+    def display_file_properties(self, file_prop, player_info, fetch_id):
         if fetch_id != self.fetch_id:
             return  # This fetch was cancelled
-        file_prop, player_info = display_data
-
+            
         self.properties_list.DeleteAllItems()
         self.details_list.DeleteAllItems()
 
-        rgb_values = {
-            "Gold": (204, 153, 0),
-            "Red": (200, 0, 0),
-            "Blue": (0, 102, 204),
-            "Green": (0, 128, 0),
-            "Orange": (225, 100, 0),
-            "Cyan": (0, 150, 180),
-            "Purple": (128, 0, 128),
-            "Pink": (200, 50, 150),
-        }
+        ver_str = 'default'
         # Display properties in the list
         for i, (prop, value) in enumerate(file_prop[:-1]):
             if (prop == "SW Restriction") and (value == "Unknown"):
@@ -607,23 +609,26 @@ class ReplayBrowserTab(wx.Panel):
                     self.properties_list.SetItemTextColour(index, wx.Colour(0, 128, 0))  # green
                 else:
                     self.properties_list.SetItemTextColour(index, wx.Colour(200, 0, 0))  # red
-            if prop == "EXE check (1.04)":
+            elif prop == "EXE check (1.04)":
                 if value == 'Failed':
                     self.properties_list.SetItemTextColour(index, wx.Colour(200, 0, 0))  # red
-            if prop == "INI check (1.04)":
+            elif prop == "INI check (1.04)":
                 if value == 'Failed':
                     self.properties_list.SetItemTextColour(index, wx.Colour(200, 0, 0))  # red
-            if prop == "Player Name":
-                self.properties_list.SetItemTextColour(index, wx.Colour(rgb_values.get(file_prop[-1][1], (0, 0, 0))))
+            elif prop == 'Version String':
+                if value in version_config:
+                    ver_str = value
+            elif prop == "Player Name":
+                self.properties_list.SetItemTextColour(index, wx.Colour(version_config[ver_str]['colors'].get(file_prop[-1][1], ['Unknown', (0, 0, 0)])[1]))
         
         # Add player info to details_list
         for row in player_info:
             if len(row) > 0:
                 index = self.details_list.InsertItem(self.details_list.GetItemCount(), str(row[0]))
-                color_name = row[-1]
+                color_num = row[-1]
                 for col in range(1, min(len(row), self.details_list.GetColumnCount())):
                     self.details_list.SetItem(index, col, str(row[col]))
-                self.details_list.SetItemTextColour(index, rgb_values.get(color_name, (0, 0, 0)))
+                self.details_list.SetItemTextColour(index, version_config[ver_str]['colors'].get(color_num, ['Unknown', (0, 0, 0)])[1])
                 
     def on_action_file(self, event):
         if self.tab_type == "local":
@@ -730,7 +735,8 @@ class ReplayBrowserTab(wx.Panel):
     
     def rename_file(self, filepath):
         try:
-            base_name = replay_result.get_replay_info(filepath, 1, True)
+            rep2 = replay_result.ReplayResultParser(filepath)
+            base_name = rep2.get_new_replay_name()
             if base_name:
                 new_filename = f"{base_name}.rep"
                 new_filepath = os.path.join(os.path.dirname(filepath), new_filename)
@@ -751,6 +757,8 @@ class ReplayBrowserTab(wx.Panel):
                 self.properties_list.DeleteAllItems()
                 self.details_list.DeleteAllItems()
         except Exception as e:
+            self.search_ctrl.Clear()
+            self.load_directory(self.current_directory)
             raise Exception(f"Failed to rename {filepath}: {str(e)}")
     
     def on_move_files(self, event):
