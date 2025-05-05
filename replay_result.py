@@ -759,7 +759,7 @@ class ReplayResultParser:
                 # Exit if player was not found in crc check
                 if players_quit_frames[self.replay_player_num]['last_crc'] == None:
                     # this replay's player did not stay till the end.
-                    crc_index_before_quit = self.body.rfind(f"470400000{self.replay_player_num:x}0000000200010201", 0, self.player_quit_idxs[self.replay_player_num][0])
+                    crc_index_before_quit = self.body.rfind(f"470400000{self.replay_player_num:x}0000000200010201", 0, max(self.player_quit_idxs[self.replay_player_num]))
                     crc_frame_before_quit = self.body[crc_index_before_quit-8:crc_index_before_quit]
 
                     if frame_time < self.hex_to_decimal(crc_frame_before_quit):
@@ -980,6 +980,8 @@ class ReplayResultParser:
                         # print('Wrong slot in rep.')
                         # since there are cases where slot is wrong, take the replay_player_num from the clear replay message at the end.
                         replay_player_num = int(self.body[-9:-8], 16)
+                    if offset < 2:
+                        offset = 2
                     return replay_player_num, offset, True
                 else:
                     return replay_player_num, offset, False
@@ -989,6 +991,8 @@ class ReplayResultParser:
             if self.body[-18:-10] == '1b000000':
                 replay_player_num = int(self.body[-9:-8], 16)
                 offset = replay_player_num - fixed_slots[player_slot]
+                if offset < 2:
+                    offset = 2
                 return replay_player_num, offset, True
 
         # if no logic crc was found, the replay ended in dc at start, so it dosen't matter.  
