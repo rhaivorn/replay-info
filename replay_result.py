@@ -659,6 +659,13 @@ class ReplayResultParser:
                         frame['surrender/exit?'] = None
             self.update_teams_quit_idxs()
             self.found_winner, self.winning_team = self.find_winning_team()
+            
+            if self.found_winner and len(self.teams)>1:
+                victory_idx = max([quit_idx for team, member in self.teams.items() if team != self.winning_team for quit_idx in member.values()])
+                for pl_num, quit_idx in self.teams[self.winning_team].items():
+                    if (quit_idx != -1) and (self.players_quit_frames[pl_num]['surrender/exit?'] != None) and (self.players_quit_frames[pl_num]['surrender/exit?'] > self.extract_frame(victory_idx)):
+                        self.players_quit_frames[pl_num]['exit'] = self.players_quit_frames[pl_num]['surrender/exit?']
+                        self.players_quit_frames[pl_num]['surrender/exit?'] = None
 
     def get_player_final_message_frame(self):
         player_final_message_frame = self.match_data['end_frame']
@@ -758,21 +765,17 @@ class ReplayResultParser:
 
                 # Exit if player was not found in crc check
                 if players_quit_frames[self.replay_player_num]['last_crc'] == None:
-                    # this replay's player did not stay till the end.
-                    crc_index_before_quit = self.body.rfind(f"470400000{self.replay_player_num:x}0000000200010201", 0, max(self.player_quit_idxs[self.replay_player_num]))
-                    crc_frame_before_quit = self.body[crc_index_before_quit-8:crc_index_before_quit]
-
-                    if frame_time < self.hex_to_decimal(crc_frame_before_quit):
-                        if self.body.rfind(f"{crc_frame_before_quit}470400000{player_num:x}0000000200010201") != -1:
-                            # if player_num quit before this replay's player and then was part of a crc check before replay_player_num quit.
+                    crc_index_after_quit = self.body.find(f"470400000{self.replay_player_num:x}0000000200010201", self.player_quit_idxs[player_num][0])
+                    if crc_index_after_quit != -1:
+                        crc_frame_after_quit = self.body[crc_index_after_quit-8:crc_index_after_quit]
+                        pl_num_check = self.body.find(f"{crc_frame_after_quit}470400000{player_num:x}0000000200010201", self.player_quit_idxs[player_num][0])
+                        if (pl_num_check != -1):
                             player_data['surrender'] = frame_time
                         else:
-                            # else player exited
                             player_data['exit'] = frame_time
                     else:
-                        # if no crc check after player quit and before this replay's player quit, its surrender or exit (we don't know which)
                         player_data['surrender/exit?'] = frame_time
-                elif players_quit_frames[self.replay_player_num]['last_crc'] != '':
+                elif players_quit_frames[self.replay_player_num]['last_crc'] != None:
                     if player_data['last_crc'] == None:
                         player_data['exit'] = frame_time
                     else:
