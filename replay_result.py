@@ -314,9 +314,9 @@ class ReplayResultParser:
         
         # Convert Windows SYSTEMTIME to datetime
         year, month, _, day, hour, minute, second, millis = systemtime_date
-        windows_dt = datetime(year, month, day, hour, minute, second, millis * 1000)
+        windows_dt = datetime(year, month, day, hour, minute, second, millis * 1000).replace(tzinfo=timezone.utc)
         
-        utc_dt = datetime.fromtimestamp(utc_date)
+        utc_dt = datetime.fromtimestamp(utc_date, timezone.utc)
         
         offset_minutes = int((windows_dt - utc_dt).total_seconds() // 60)
         
